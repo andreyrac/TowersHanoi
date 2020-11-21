@@ -18,15 +18,6 @@ const (
 // rods Response to /state and holding variable of the actual state
 var rods = [3][numDisks]int{}
 
-// Restart restarts the state of the rods to the beginning
-func Restart() {
-	for i := 0; i < numDisks; i++ {
-		rods[0][i] = numDisks - i
-		rods[1][i] = 0
-		rods[2][i] = 0
-	}
-}
-
 // getTopDisk removes the top disk from rod.
 // returns the disc number or 0 if no disk present
 func getTopDisk(rod *[numDisks]int) int {
@@ -72,6 +63,42 @@ func checkWinState() bool {
 	return true
 }
 
+// moveDisk internal call used by MoveDisk
+func moveDisk(fromS string, toS string) int {
+	from, errF := strconv.Atoi(fromS)
+	to, errT := strconv.Atoi(toS)
+	if errF != nil || errT != nil || from < 0 || from >= numDisks || to < 0 || to >= numDisks {
+		return InvalidMove
+	}
+
+	// make the move, return early on invalid moves
+	disk := getTopDisk(&rods[from])
+	if disk == 0 {
+		return InvalidMove
+	}
+	if !moveDiskTo(&rods[to], disk) {
+		moveDiskTo(&rods[from], disk) // rewind move
+		return InvalidMove
+	}
+
+	// send the valid move or winning move response
+	var response = ValidMove;
+	if checkWinState() {
+		return WinningMove
+	} else {
+		return ValidMove
+	}
+}
+
+// Restart restarts the state of the rods to the beginning
+func Restart() {
+	for i := 0; i < numDisks; i++ {
+		rods[0][i] = numDisks - i
+		rods[1][i] = 0
+		rods[2][i] = 0
+	}
+}
+
 // PostState posts the state of the Hanoi Tower Rods
 func PostState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rods)
@@ -79,30 +106,7 @@ func PostState(w http.ResponseWriter, r *http.Request) {
 
 // MoveDisk performs movement of disks and responds with: InvalidMod, ValidMove or WinningMove
 func MoveDisk(w http.ResponseWriter, r *http.Request) {
-	from, errF := strconv.Atoi(r.FormValue("From"))
-	to, errT := strconv.Atoi(r.FormValue("To"))
-	if errF != nil || errT != nil || from < 0 || from >= numDisks || to < 0 || to >= numDisks {
-		json.NewEncoder(w).Encode(InvalidMove)
-		return
-	}
-
-	// make the move, return early on invalid moves
-	disk := getTopDisk(&rods[from])
-	if disk == 0 {
-		json.NewEncoder(w).Encode(InvalidMove)
-		return
-	}
-	if !moveDiskTo(&rods[to], disk) {
-		moveDiskTo(&rods[from], disk) // rewind move
-		json.NewEncoder(w).Encode(InvalidMove)
-		return
-	}
-
-	// send the valid move or winning move response
-	var response = ValidMove;
-	if checkWinState() {
-		response = WinningMove
-	}
+	response := moveDisk(r.formValue("From"), r.FormValue("To");
 	json.NewEncoder(w).Encode(response)
 }
 
