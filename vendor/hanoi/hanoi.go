@@ -54,13 +54,8 @@ func moveDiskTo(rod *[numDisks]int, disk int) bool {
 
 // checkWinState checks the rods to see if the last rod holds all the disks
 func checkWinState() bool {
-	// check for winning condition
-	for i := 0; i < numDisks; i++ {
-		if rods[2][i] != numDisks - i {
-			return false
-		}
-	}
-	return true
+	// cheap shortcut, assumes moveDisk is working correctly
+	return rods[2][numDisks - 1] != 0
 }
 
 // moveDisk internal call used by MoveDisk
@@ -82,7 +77,6 @@ func moveDisk(fromS string, toS string) int {
 	}
 
 	// send the valid move or winning move response
-	var response = ValidMove;
 	if checkWinState() {
 		return WinningMove
 	} else {
@@ -106,18 +100,11 @@ func PostState(w http.ResponseWriter, r *http.Request) {
 
 // MoveDisk performs movement of disks and responds with: InvalidMod, ValidMove or WinningMove
 func MoveDisk(w http.ResponseWriter, r *http.Request) {
-	response := moveDisk(r.formValue("From"), r.FormValue("To");
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(moveDisk(r.FormValue("From"), r.FormValue("To")))
 }
 
 // HasWon responds with true if state is a winning state
 func HasWon(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(checkWinState())
-}
-
-// RestartState restarts the game to the beginning state and posts the state as the response
-func RestartState(w http.ResponseWriter, r *http.Request) {
-	Restart();
-	PostState(w, r);
 }
 
