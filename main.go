@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/andreyrac/TowersHanoi/hanoi"
 	"net/http"
-	"hanoi"
 )
 
 func main() {

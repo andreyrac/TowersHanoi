@@ -2,6 +2,7 @@ package hanoi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -41,7 +42,7 @@ func moveDiskTo(rod *[numDisks]int, disk int) bool {
 		}
 		if rod[i] < disk {
 			// attempting to stack larger disk on smaller disk
-			return false;
+			return false
 		}
 		// top of stack found and valid
 		rod[i+1] = disk
@@ -55,23 +56,42 @@ func moveDiskTo(rod *[numDisks]int, disk int) bool {
 // checkWinState checks the rods to see if the last rod holds all the disks
 func checkWinState() bool {
 	// cheap shortcut, assumes moveDisk is working correctly
-	return rods[2][numDisks - 1] != 0
+	return rods[2][numDisks-1] != 0
 }
 
-// moveDisk internal call used by MoveDisk
+// moveDisk internal call used by MoveDisk.
+// returns InvalidMove, ValueMove, or WinningMove
 func moveDisk(fromS string, toS string) int {
+	// input 'from' value
 	from, errF := strconv.Atoi(fromS)
+	if errF != nil {
+		fmt.Printf("failed to convert 'from' string[%s]: %s\n", fromS, errF)
+		return InvalidMove
+	}
+	if from < 0 || from >= 3 {
+		fmt.Printf("'from' value out of range: %d\n", from)
+		return InvalidMove
+	}
+
+	// input 'to' value
 	to, errT := strconv.Atoi(toS)
-	if errF != nil || errT != nil || from < 0 || from >= numDisks || to < 0 || to >= numDisks {
+	if errT != nil {
+		fmt.Printf("failed to convert 'to' string[%s]: %s\n", toS, errT)
+		return InvalidMove
+	}
+	if to < 0 || to >= 3 {
+		fmt.Printf("'to' value out of range: %d\n", to)
 		return InvalidMove
 	}
 
 	// make the move, return early on invalid moves
 	disk := getTopDisk(&rods[from])
 	if disk == 0 {
+		fmt.Printf("'from' rod %d is empty\n", from)
 		return InvalidMove
 	}
 	if !moveDiskTo(&rods[to], disk) {
+		fmt.Printf("cannot stack larger disk[%d] onto smaller disk on rod %d\n", disk, to)
 		moveDiskTo(&rods[from], disk) // rewind move
 		return InvalidMove
 	}
@@ -98,13 +118,13 @@ func PostState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rods)
 }
 
-// MoveDisk performs movement of disks and responds with: InvalidMod, ValidMove or WinningMove
+// MoveDisk performs movement of disks and responds with: InvalidMove, ValidMove or WinningMove
 func MoveDisk(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(moveDisk(r.FormValue("From"), r.FormValue("To")))
+	response := moveDisk(r.FormValue("From"), r.FormValue("To"))
+	json.NewEncoder(w).Encode(response)
 }
 
 // HasWon responds with true if state is a winning state
 func HasWon(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(checkWinState())
 }
-
